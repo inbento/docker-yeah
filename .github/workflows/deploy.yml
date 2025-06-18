@@ -78,7 +78,7 @@ jobs:
           echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest"
 
       - name: Deploy to server
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
