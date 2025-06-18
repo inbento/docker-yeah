@@ -5,7 +5,7 @@ on:
     branches: [ "master", "main" ]
 
 env:
-  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/python-crud
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/brattain-crud
 
 jobs:
   test:
@@ -16,14 +16,14 @@ jobs:
 
       - name: Build container
         run: |
-          podman build -t kubsu/python-crud-dev:latest .
+          podman build -t kubsu/brattain-crud:latest .
 
       - name: Run tests
         env:
           DATABASE_URL: "postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu"
           PYTHONPATH: .
         run: |
-          podman run --rm --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu" -e PYTHONPATH=. kubsu/python-crud-dev:latest python -m pytest -v tests/
+          podman run --rm --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu" -e PYTHONPATH=. kubsu/brattain-crud:latest python -m pytest -v tests/
 
   build-and-push:
     needs: test
@@ -51,5 +51,5 @@ jobs:
         run: |
           podman stop python-crud || true
           podman rm python-crud || true
-          podman run -d --name python-crud --network host ${{ env.DOCKER_IMAGE }}:latest
+          podman run -d --name brattain-crud --network host ${{ env.DOCKER_IMAGE }}:latest
           echo "Container has been deployed successfully!"
