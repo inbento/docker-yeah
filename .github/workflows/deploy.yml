@@ -84,20 +84,19 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: "123"
           script: |
             podman login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }} docker.io
-
-            # Stop and remove existing container if it exists
+            
             podman stop python-crud || true
             podman rm python-crud || true
-
-            # Remove existing image if it exists
+            
             podman rmi ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest || true
-
-            # Pull new image from Docker Hub
+            
             podman pull ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest
-
-            # Run new container
-            podman run -d --name python-crud --network host ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest
-            echo "Container has been deployed successfully!"
+            
+            podman run -d \
+              --name python-crud \
+              --network host \
+              -p 8020:8020 \
+              ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest
+            echo "✅ Container deployed!"
