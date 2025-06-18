@@ -1,0 +1,103 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "master", "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: kubsu
+          POSTGRES_USER: kubsu
+          POSTGRES_PASSWORD: kubsu
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: kubsu/python-crud-dev:latest
+          load: true
+
+      - name: Run tests
+        env:
+          DATABASE_URL: "postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu"
+          PYTHONPATH: .
+        run: |
+          docker run --rm --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu" -e PYTHONPATH=. kubsu/python-crud-dev:latest python -m pytest -v tests/
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout master branch
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Debug credentials
+        run: |
+          echo "Using Docker Hub username: ${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "Token exists: ${{ secrets.DOCKERHUB_TOKEN != '' }}"
+
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest
+
+      - name: Success message
+        run: |
+          echo "✅ Docker image successfully pushed to Docker Hub!"
+          echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest"
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: "123"
+          script: |
+            podman login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }} docker.io
+
+            # Stop and remove existing container if it exists
+            podman stop python-crud || true
+            podman rm python-crud || true
+
+            # Remove existing image if it exists
+            podman rmi ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest || true
+
+            # Pull new image from Docker Hub
+            podman pull ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest
+
+            # Run new container
+            podman run -d --name python-crud --network host ${{ secrets.DOCKERHUB_USERNAME }}/python-crud:latest
+            echo "Container has been deployed successfully!"
