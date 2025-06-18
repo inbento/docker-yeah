@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: kubsu
+      POSTGRES_PASSWORD: kubsu
+      POSTGRES_DB: kubsu
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U kubsu -d kubsu" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://kubsu:kubsu@db:5432/kubsu"
+    ports:
+      - "8020:8020"
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    command: [ "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8020", "--reload" ]
+
+  tests:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://kubsu:kubsu@db:5432/kubsu"
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    command: [ "sh", "-c", "pip install pytest pytest-asyncio && pytest tests/ -v" ]
+
+volumes:
+  postgres_data:
