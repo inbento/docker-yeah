@@ -91,7 +91,7 @@ jobs:
           sleep 10
           
           echo "Checking PostgreSQL connection..."
-          nc -zv localhost 5432 || echo "❌ PostgreSQL not accessible on localhost:5432"
+          nc -zv localhost 5432 || echo "PostgreSQL not accessible on localhost:5432"
           
           echo "Cleaning up old app images..."
           podman rmi ${{  env.DOCKER_IMAGE }}:latest || true
@@ -123,12 +123,6 @@ jobs:
           
           echo "App container logs:"
           podman logs --tail 20 brattain-crud
-          
-          echo "Health check:"
-          curl -f http://localhost:8020/health || echo "❌ Health check failed"
-          
-          echo "Root endpoint check:"
-          curl -f http://localhost:8020/ || echo "❌ Root endpoint failed"
           
           echo "Deployment completed!"
           echo "Deployed app: ${{  env.DOCKER_IMAGE }}:${{ github.sha }}"
