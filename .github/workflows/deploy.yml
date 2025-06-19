@@ -32,7 +32,7 @@ jobs:
           docker build -t test-image .
           docker run --rm --network host \
             -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu" \
-            test-image brattain -m pytest -v tests/
+            test-image python -m pytest -v tests/
 
   build:
     needs: test
