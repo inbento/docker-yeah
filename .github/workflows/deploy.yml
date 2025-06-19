@@ -49,23 +49,23 @@ jobs:
           echo "Commit: ${{ github.sha }}"
           echo "Date: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           
-          docker build --no-cache -t ${{ env.IMAGE_NAME }}:latest \
+          docker build --no-cache -t ${{  env.DOCKER_IMAGE }}:latest \
             --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
             --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
             .
           
           echo "Tagging image with SHA..."
-          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker tag ${{  env.DOCKER_IMAGE }}:latest ${{  env.DOCKER_IMAGE }}:${{ github.sha }}
           
           echo "Pushing to Docker Hub..."
-          docker push ${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{  env.DOCKER_IMAGE }}:latest
+          docker push ${{  env.DOCKER_IMAGE }}:${{ github.sha }}
           
           echo "Image pushed successfully!"
           echo "Image tags:"
-          echo "  - ${{ env.IMAGE_NAME }}:latest"
-          echo "  - ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "  - ${{  env.DOCKER_IMAGE }}:latest"
+          echo "  - ${{  env.DOCKER_IMAGE }}:${{ github.sha }}"
 
   deploy:
     needs: build
@@ -94,14 +94,14 @@ jobs:
           nc -zv localhost 5432 || echo "❌ PostgreSQL not accessible on localhost:5432"
           
           echo "Cleaning up old app images..."
-          podman rmi ${{ env.IMAGE_NAME }}:latest || true
+          podman rmi ${{  env.DOCKER_IMAGE }}:latest || true
           
           echo "Pulling latest app image..."
-          podman pull ${{ env.IMAGE_NAME }}:latest
+          podman pull ${{  env.DOCKER_IMAGE }}:latest
           
           echo "Image info:"
-          podman inspect ${{ env.IMAGE_NAME }}:latest --format '{{.Created}}' || echo "No image info"
-          podman inspect ${{ env.IMAGE_NAME }}:latest --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' || echo "No revision info"
+          podman inspect ${{  env.DOCKER_IMAGE }}:latest --format '{{.Created}}' || echo "No image info"
+          podman inspect ${{  env.DOCKER_IMAGE }}:latest --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' || echo "No revision info"
           
           echo "Stopping old app container..."
           podman stop brattain-crud || true
@@ -112,7 +112,7 @@ jobs:
             -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu" \
             --label "deployment.commit=${{ github.sha }}" \
             --label "deployment.date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-            ${{ env.IMAGE_NAME }}:latest
+            ${{  env.DOCKER_IMAGE }}:latest
           
           echo "Waiting 8 seconds for app to start..."
           sleep 8
@@ -131,5 +131,5 @@ jobs:
           curl -f http://localhost:8020/ || echo "❌ Root endpoint failed"
           
           echo "Deployment completed!"
-          echo "Deployed app: ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Deployed app: ${{  env.DOCKER_IMAGE }}:${{ github.sha }}"
           echo "PostgreSQL data: $DATA_DIR"
