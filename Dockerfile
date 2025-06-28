@@ -3,7 +3,6 @@ FROM python:3.11-alpine
 WORKDIR /app
 
 RUN apk add --no-cache --virtual .build-deps \
-    gcc \
     && pip install --no-cache-dir uv \
     && apk del .build-deps
 
